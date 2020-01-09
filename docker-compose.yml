@@ -1,27 +1,27 @@
 rng:
-    build: rng
+    build: dockerfiles/rng
     ports:
       - "8001:80"
 
 hasher:
-    build: hasher
+    build: dockerfiles/hasher
     ports:
       - "8002:80"
 
 webui:
-    build: webui
+    build: dockerfiles/webui
     links:
       - redis
     ports:
       - "8000:80"
     volumes:
-      - "./webui/files/:/files/"
+      - "./dockerfiles/webui/files/:/files/"
 
 redis:
-    image: redis
+    image: dockerfiles/redis
 
 worker:
-    build: worker
+    build: dockerfiles/worker
     links:
       - rng
       - hasher
