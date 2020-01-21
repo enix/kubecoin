@@ -28,9 +28,16 @@ minio:
       secretName: gitlab-minio-tls
 gitlab-runner:
   certsSecretName: gitlab-ca-crt
+<<<<<<< HEAD
 ###### Don't touch value above, this could break you gitlab
   ## To increase the number of runner
   # replicaCount: 3
   #
   # runners:
   #  privileged: true
+=======
+##
+#  replicaCount: 4
+  runners:
+    privileged: true
+>>>>>>> 69e8459... test on a deployment exercise

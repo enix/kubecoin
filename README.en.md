@@ -102,7 +102,7 @@ Try scaling the various component of the app ! Remember we want to get richer an
 Install prometheus and grafana
 
 ```shell
-resources $ make protheus
+resources $ make prometheus
 resources $ make grafana
 ```
 
