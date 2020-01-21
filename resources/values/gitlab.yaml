@@ -25,9 +25,12 @@ registry:
 minio:
   ingress:
     tls:
-      secretName: gitlab-registry-tls
+      secretName: gitlab-minio-tls
 gitlab-runner:
   certsSecretName: gitlab-ca-crt
-##
-  runners:
-    privileged: true
+###### Don't touch value above, this could break you gitlab
+  ## To increase the number of runner
+  # replicaCount: 3
+  #
+  # runners:
+  #  privileged: true

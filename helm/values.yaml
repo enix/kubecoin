@@ -1,14 +1,14 @@
 imagePullSecrets:
   - name: regcreds
 
-ingress:
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-
-hasher:
-  pods:
-    annotations:
-      prometheus.io/path: '/metrics'
-
-extraEnvs:
-  TELEMETRY_AGENT: jaeger-agent.monitoring
+#ingress:
+#  annotations:
+#    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+#
+#hasher:
+#  pods:
+#    annotations:
+#      prometheus.io/path: '/metrics'
+#
+#extraEnvs:
+#  TELEMETRY_AGENT: jaeger-agent.monitoring
