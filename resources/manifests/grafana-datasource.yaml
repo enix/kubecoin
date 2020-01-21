@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-datasource
+  labels:
+     grafana_datasource: "1"
+type: Opaque
+stringData:
+  datasource.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      orgId: 1
+      url: http://prometheus-server
+      editable: false

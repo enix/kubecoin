@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "kubecoin.fullname" . }}-test-connection"
+  labels:
+{{ include "kubecoin.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args:  ['{{ include "kubecoin.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never

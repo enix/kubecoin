@@ -1,0 +1,8 @@
+admin:
+  existingSecret: grafana-admin
+
+sidecar:
+  dashboards:
+    enabled: true
+  datasources:
+    enabled: true

@@ -1,0 +1,7 @@
+controller:
+  kind: DaemonSet
+  daemonset:
+    useHostPort: true
+  tolerations:
+    - key: node-role.kubernetes.io/master
+      effect: NoSchedule

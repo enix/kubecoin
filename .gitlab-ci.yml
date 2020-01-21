@@ -1,0 +1,80 @@
+---
+variables:
+  DOCKER_HOST: tcp://localhost:2375
+  DOCKER_TLS_CERTDIR: ""
+
+stages:
+  - lint
+  - build
+  - test
+  - deploy
+
+services:
+  - docker:stable-dind
+
+# .build-docker: &docker_build
+#   image: docker:stable
+#   script:
+#     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+#     - docker build dockerfiles/${IMAGE} -t "${CI_REGISTRY_IMAGE}/${IMAGE}:${CI_COMMIT_SHORT_SHA}"
+#     - docker push "${CI_REGISTRY_IMAGE}/${IMAGE}:${CI_COMMIT_SHORT_SHA}"
+
+.build-kaniko: &docker_build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context dockerfiles/${IMAGE} --dockerfile dockerfiles/${IMAGE}/Dockerfile --skip-tls-verify --destination ${CI_REGISTRY_IMAGE}/${IMAGE}:${CI_COMMIT_SHORT_SHA}
+
+build-rng:
+  <<: *docker_build
+  stage: build
+  variables:
+    IMAGE: 'rng'
+
+build-webui:
+  <<: *docker_build
+  stage: build
+  variables:
+    IMAGE: 'webui'
+
+build-hasher:
+  <<: *docker_build
+  stage: build
+  variables:
+    IMAGE: 'hasher'
+
+build-worker:
+  <<: *docker_build
+  stage: build
+  variables:
+    IMAGE: 'worker'
+
+deploy-test:
+  stage: test
+  image: dtzar/helm-kubectl:3.0.2
+  script:
+    - kubectl create namespace test-${CI_COMMIT_SHORT_SHA}
+    - kubectl label namespace test-${CI_COMMIT_SHORT_SHA} test=kubecoin
+    - kubectl -n test-${CI_COMMIT_SHORT_SHA} apply -f ${REGCREDS}
+    - >-
+        helm upgrade --install test-${CI_COMMIT_SHORT_SHA} helm/kubecoin
+        -n test-${CI_COMMIT_SHORT_SHA}
+        -f helm/values.yaml
+        --set global.tag=${CI_COMMIT_SHORT_SHA}
+        --set global.registry=${CI_REGISTRY_IMAGE}
+        --set ingress.host=kubecoin-${CI_COMMIT_SHORT_SHA}-${CI_SERVER_HOST}
+
+helm-lint:
+  stage: lint
+  image: dtzar/helm-kubectl:3.0.2
+  script:
+    - helm lint helm/kubecoin
+
+cleanup:
+  stage: .post
+  image: dtzar/helm-kubectl:3.0.2
+  script:
+    - kubectl delete namespace test-${CI_COMMIT_SHORT_SHA}
+  when: manual

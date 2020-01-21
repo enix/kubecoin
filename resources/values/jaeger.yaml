@@ -1,0 +1,5 @@
+provisionDataStore:
+  cassandra: false
+
+storage:
+  type: elasticsearch

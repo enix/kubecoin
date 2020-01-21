@@ -2,6 +2,7 @@ rng:
     build: dockerfiles/rng
     environment:
       - TELEMETRY_AGENT=Console
+      - NAMESPACE=foo
     ports:
       - "8001:80"
 
@@ -26,6 +27,7 @@ worker:
     build: dockerfiles/worker
     environment:
       - TELEMETRY_AGENT=Console
+      - NAMESPACE=foo
     links:
       - rng
       - hasher

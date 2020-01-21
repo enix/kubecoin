@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    {{- include "kubecoin.labels" . | nindent 4 }}
+spec:
+  type: ExternalName
+  externalName: '{{ include "kubecoin.redis.service" . }}.{{ .Release.Namespace }}.{{ default "svc.cluster.local" .Values.global.clusterDNS }}'
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "kubecoin.selectorLabels" . | nindent 4 }}

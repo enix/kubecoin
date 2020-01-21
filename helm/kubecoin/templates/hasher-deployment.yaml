@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubecoin.fullname" . }}-hasher
+  labels:
+    component: hasher
+    {{- include "kubecoin.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.hasher.replicaCount }}
+  selector:
+    matchLabels:
+      component: hasher
+      {{- include "kubecoin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.hasher.pods.annotations }}
+      annotations:
+        {{ . | toYaml | nindent 8 }}
+        prometheus.io/path: '/metrics'
+      {{- end }}
+      labels:
+        component: hasher
+        {{- include "kubecoin.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "kubecoin.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.hasher.podSecurityContext | nindent 8 }}
+      containers:
+        - name: hasher
+          securityContext:
+            {{- toYaml .Values.hasher.securityContext | nindent 12 }}
+          image: {{ include "kubecoin.hasher.image" . }}
+          imagePullPolicy: {{ .Values.hasher.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.hasher.resources | nindent 12 }}
+      {{- with .Values.hasher.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.hasher.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.hasher.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

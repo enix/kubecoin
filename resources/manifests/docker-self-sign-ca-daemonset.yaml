@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: docker-self-sign-ca
+  namespace: gitlab
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: docker-self-sign-ca
+subjects:
+- kind: ServiceAccount
+  name: docker-self-sign-ca
+  namespace: gitlab
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: docker-self-sign-ca
+  namespace: gitlab
+  labels:
+    app.kubernetes.io/name: docker-self-sign-ca
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: docker-self-sign-ca
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: docker-self-sign-ca
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      serviceAccountName: docker-self-sign-ca
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+      - name: kubectl
+        image: bitnami/kubectl
+        command: ["/bin/bash", "-c"]
+        args:
+         - |
+            set -e
+            HOST=$(kubectl -n ${NAMESPACE} get ingress gitlab-registry -o jsonpath='{.spec.rules[0].host}')
+            echo "Found registry host: ${HOST}"
+            CLUSTER_ISSUER=$(kubectl -n gitlab get ingress gitlab-registry -o jsonpath='{.metadata.annotations.cert-manager\.io/cluster-issuer}')
+            echo "Found clustet-issuer ${CLUSTER_ISSUER}"
+            SECRET=$(kubectl get clusterissuer ${CLUSTER_ISSUER} -o jsonpath='{.spec.ca.secretName}')
+            DOCKER_DIR="/etc/docker/certs.d/${HOST}"
+            mkdir -p ${DOCKER_DIR}
+            kubectl -n ingress get secret ${SECRET} -o jsonpath='{.data.tls\.crt}' | base64 -d > ${DOCKER_DIR}/ca.crt
+            echo "Succefully install ca.crt"
+            cat ${DOCKER_DIR}/ca.crt
+            echo "sleep forever..."
+            sleep infinity
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - name: certs
+          mountPath: /etc/docker/certs.d/
+      volumes:
+      - name: certs
+        hostPath:
+          path: /etc/docker/certs.d

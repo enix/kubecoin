@@ -1,0 +1,33 @@
+global:
+  ingress:
+    annotations:
+      cert-manager.io/cluster-issuer: "ca-self-sign"
+    class: nginx
+    configureCertmanager: false
+  edition: ce
+  grafana:
+    enabled: false
+prometheus:
+  install: false
+certmanager:
+  install: false
+nginx-ingress:
+  enabled: false
+gitlab:
+  unicorn:
+    ingress:
+      tls:
+        secretName: gitlab-gitlab-tls
+registry:
+  ingress:
+    tls:
+      secretName: gitlab-registry-tls
+minio:
+  ingress:
+    tls:
+      secretName: gitlab-registry-tls
+gitlab-runner:
+  certsSecretName: gitlab-ca-crt
+##
+  runners:
+    privileged: true

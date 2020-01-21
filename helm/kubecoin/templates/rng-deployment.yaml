@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubecoin.fullname" . }}-rng
+  labels:
+    component: rng
+    {{- include "kubecoin.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.rng.replicaCount }}
+  selector:
+    matchLabels:
+      component: rng
+      {{- include "kubecoin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        component: rng
+        {{- include "kubecoin.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "kubecoin.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.rng.podSecurityContext | nindent 8 }}
+      containers:
+        - name: rng
+          securityContext:
+            {{- toYaml .Values.rng.securityContext | nindent 12 }}
+          image: {{ include "kubecoin.rng.image" . }}
+          imagePullPolicy: {{ .Values.rng.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.rng.resources | nindent 12 }}
+          env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+
+          {{- with mergeOverwrite dict .Values.extraEnvs .Values.rng.extraEnvs }}
+          {{- range $key, $value := . }}
+          - name: {{ $key }}
+            value: {{ $value }}
+          {{- end }}
+          {{- end }}
+      {{- with .Values.rng.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.rng.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.rng.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
