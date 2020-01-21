@@ -1,5 +1,7 @@
 rng:
     build: dockerfiles/rng
+    environment:
+      - TELEMETRY_AGENT=Console
     ports:
       - "8001:80"
 
@@ -22,6 +24,8 @@ redis:
 
 worker:
     build: dockerfiles/worker
+    environment:
+      - TELEMETRY_AGENT=Console
     links:
       - rng
       - hasher
