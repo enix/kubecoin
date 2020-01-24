@@ -29,5 +29,6 @@ minio:
 gitlab-runner:
   certsSecretName: gitlab-ca-crt
 ##
+  replicaCount: 4
   runners:
     privileged: true
