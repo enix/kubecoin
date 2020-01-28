@@ -25,7 +25,7 @@ registry:
 minio:
   ingress:
     tls:
-      secretName: gitlab-registry-tls
+      secretName: gitlab-minio-tls
 gitlab-runner:
   certsSecretName: gitlab-ca-crt
 ##
