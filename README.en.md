@@ -10,6 +10,16 @@ The kubecoin project is split in 4 parts:
 
 ## Preparation: deploy tooling to kubernetes
 
+### Step 0
+
+Clone this repository:
+
+```shell
+cd ~
+git clone https://github.com/enix/kubecoin
+cd kubecoin
+```
+
 ### Step 1
 
 We need to retrieve the IP address of one of the nodes of our cluster. This is cluster dependent,
@@ -41,19 +51,50 @@ Once we have the required components, we can install GitLab.
 The following commands will take care of everything for us:
 
 ```shell
-resources $ make gitlab                   # Default password will be displayed at the end
-resources $ kubectl -n gitlab get pods -w # Wait for installation to finish
+resources $ make gitlab
+# The GitLab password will be shown at the end of the "make gitlab" command.
+resources $ watch kubectl -n gitlab get pods
+# Wait until all the pods have Running or Completed in the STATUS column.
+# (This will take a few minutes.)
 ```
 
-Now, we can open https://gitlab.$INGRESS_IP.nip.io/ in our browser, and setup GitLab as desired. We should change the default password, and add an SSH key.
+Now, we can open https://gitlab.$INGRESS_IP.nip.io/ in our browser, and setup GitLab as desired. The login is `root`, and the password is the (very long) password that was generated and displayed at the end of `make gitlab`. We can change the default password if we wish.
+
+Add an SSH key. This is done by opening our profile settings: click on our
+user menu in the top-right corner, select "Settings". Then in the menu
+on the left, there will be "SSH keys". We need to add our *public key*
+here. If you're using a training cluster, the SSH public key would be in
+`~/.ssh/id_rsa.pub`. Copy-paste it, click "Add key".
 
 ### Step 3
 
-Let's create an empty project (with no README or anything else), and add a remote that points to GitLab:
+Using GitLab's web UI, create an empty project. (To do that, click on
+the GitLab logo in the top left corner, then select "Create project" in
+the middle). Let's name the project `kubecoin`.
+
+*Do not* tick the box "Initialize repository with a README", because we want
+the repository to be completely empty, so that we can push to it directly.
+
+The next step is to push our `kubecoin` repository to the one
+that we just created on GitLab.
+
+Let's add a git remote that points to GitLab:
 
 ```shell
-git remote add origin gitlab ssh://gitlab.$INGRESS_IP.nip.io:2222/root/kubecoin
+git remote add gitlab ssh://git@gitlab.$INGRESS_IP.nip.io:2222/root/kubecoin
 ```
+
+We can now push our local repository to GitLab:
+
+```shell
+git push gitlab full_pipeline
+```
+
+Back to the GitLab UI, in the left sidebar, if we click on "CI /CD"
+then "Jobs", we will see the status of our pipeline. The "Build" phase
+will take a few minutes the first time, then the "Test" phase will
+fail, because we need to make some additional configuration
+(more about that in a moment).
 
 ### Step 4 (optional)
 
@@ -71,11 +112,45 @@ data:
 
 ## Exercise 1: Build dockerfiles and push to a registry
 
-Use GitLab CI to build the Dockerfile automatically.
-
-Everything is located in the `.gitlab-ci.yml` the on the top-level directory of
+The GitLab pipeline is described
+in the `.gitlab-ci.yml` the on the top-level directory of
 the repository. We have 4 images to build (`hasher`, `rng`, `webui`, `worker`)
 and to push to the GitLab built-in Docker registry.
+
+The "Test" phase of the pipeline fails because it needs a couple of
+environment variables: `KUBECONFIG` and `REGCREDS`.
+
+To set environment variables in GitLab, select "Settings" → "CI/CD"
+in the left sidebar. There will be a variables section. We need
+our variables to be of type "File", which means that GitLab
+will create a file with the data that we provide, and will set
+the environment variable to the path to that file.
+
+For `KUBECONFIG`, we can use our Kubernetes configuration file,
+located in `~/.kube/config`. Set it, try to run the pipeline again;
+now it should fail at the `REGCREDS` phase.
+
+To specify registry credentials, we need to create these credentials,
+then pass them to GitLab.
+
+To create the credentials, select "Settings" → "Repository" in
+the left sidebar. Expand the "Deploy tokens" section, input a
+name, tick the "read_registry" checkbox, and create the token.
+Save the user and password that are displayed.
+
+To use these credentials, we need to pass them to the GitLab
+CI job. This is done by generating the YAML corresponding
+to a Secret of type `docker-registry`, and passing that YAML
+as a File variable (like we did for `KUBECONFIG`).
+
+To generate the YAML representing a docker-registry secret, we can run the following command:
+
+```shell
+kubectl create secret docker-registry regcreds \
+        --docker-server=registry.$INGRESS_IP.nip.io \
+        --docker-username=foo --docker-password=bar \
+        -o yaml --dry-run
+```
 
 ### Notes
 
@@ -97,21 +172,6 @@ Kaniko can build Docker images without requiring special permissions.
 
 Use the GitLab CI pipeline to deploy an environment per commit.
 Try scaling the various component of the app! (Remember, we want to get richer and richer! More DockerCoins!)
-
-### Notes
-
-To use an image from a private registry (that requires authentication),
-we need to create a Secret of type `docker-registry`.
-
-To generate the YAML representing a docker-registry secret, we can run the following command:
-
-```shell
-kubectl create secret --dry-run -o yaml docker-registry regcreds \
-        --docker-server=registry.$INGRESS_IP.nip.io \
-        --docker-username=foo --docker-password=bar
-```
-
-We can find a `kubeconfig` file to access the cluster on the master node, in `/etc/kubernetes/admin.conf`.
 
 ## Exercice 4: Deploy prometheus to analyze scaling problem
 

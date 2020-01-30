@@ -99,6 +99,7 @@ $(JETSTACK_HELM_REPO):
 
 local-path-provisioner:
 	kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+	kubectl annotate sc local-path storageclass.kubernetes.io/is-default-class=true
 
 .PHONY: prometheus
 prometheus: namespace-$(PROMETHEUS_NAMESPACE)
