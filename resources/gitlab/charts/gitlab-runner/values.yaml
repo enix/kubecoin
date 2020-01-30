@@ -5,6 +5,9 @@
 ##
 ## ref: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 ##
+replicaCount: 1
+
+#
 # image: gitlab/gitlab-runner:alpine-v11.6.0
 
 ## Specify a imagePullPolicy

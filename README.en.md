@@ -1,25 +1,33 @@
-Let's create a build pipeline for kubecoin
-(That's the code of dockercoin that run a kubernetes)
+Let's create a build pipeline for *kubecoin*
+(it's the code of DockerCoins, running in Kubernetes).
 
-The kubecoin project has been spleet in 4 parts:
+The kubecoin project is split in 4 parts:
 
 * hasher
 * rng
 * webui
 * worker
 
-## Preparation: deploy tooling in kubernetes
+## Preparation: deploy tooling to kubernetes
 
 ### Step 1
 
-Retrieve the Ip of one of node of your cluster. This is cluster dependent,
-and there is no magical way to know this. On minikube you can use `minikube ip`,
-if you're following a training, ask the trainers on how to get this value.
-This will be referenced in the rest of the tutorial by `$INGRESS_IP`.
-You will be asked for the first `make` command you tiped.
+We need to retrieve the IP address of one of the nodes of our cluster. This is cluster dependent,
+and there is no magical way to do this. On minikube we can use `minikube ip`.
+If you're attending a training, ask the trainers how to obtain this value.
+In the rest of the tutorial, we will refer to this address by `$INGRESS_IP`.
+The first `make` command that we will run (see below) will ask us for that IP address.
 
-On minikube make sure that the `ingress` and `storage-provisioner` are enable (the default)
-If your on a bare cluster you can install them via:
+We need an *ingress controller* and a *dynamic storage provisioner*.
+
+**If we're using minikube,** we need to make sure that the addons `storage-provisioner` and `ingress` are enabled. The former is enabled by default. The latter can be enabled by running:
+
+```shell
+minikube addons enable ingress
+```
+
+**If we're using a bare cluster,** we can install an ingress controller
+and a storage provisioner with the following commands:
 
 ```shell
 $ cd resources
@@ -29,26 +37,27 @@ resources $ make local-path-provisionner
 
 ### Step 2
 
-Install gitlab via
+Once we have the required components, we can install GitLab.
+The following commands will take care of everything for us:
 
 ```shell
 resources $ make gitlab                   # Default password will be displayed at the end
 resources $ kubectl -n gitlab get pods -w # Wait for installation to finish
 ```
-Go on https://gitlab.$INGRESS_IP.nip.io, and setup the gitlab as you wish (change default password, add
-a ssh key)
 
+Now, we can open https://gitlab.$INGRESS_IP.nip.io/ in our browser, and setup GitLab as desired. We should change the default password, and add an SSH key.
 
 ### Step 3
 
-Create an empty project (with no README or else) and add an origin that point the repository in gitlab
-```
-git origin add gitlab ssh://gitlab.$INGRESS_IP.nip.io:2222/root/kubecoin
+Let's create an empty project (with no README or anything else), and add a remote that points to GitLab:
+
+```shell
+git remote add origin gitlab ssh://gitlab.$INGRESS_IP.nip.io:2222/root/kubecoin
 ```
 
-### Note:
+### Step 4 (optional)
 
-minikube users might want to edit the 'kube-system/tcp-services' to enable ssh port forwarding:
+minikube users might want to edit the ConfigMap `tcp-services` in namespace `kube-system` to enable SSH port forwarding:
 
 ```yaml
 apiVersion: v1
@@ -60,54 +69,62 @@ data:
   '2222': 'gitlab/gitlab-gitlab-shell:22'
 ```
 
-## Exercice 1: Build dockerfiles and push to a registry
+## Exercise 1: Build dockerfiles and push to a registry
 
-Use gitlab CI to build the dockerfile automatically.
+Use GitLab CI to build the Dockerfile automatically.
+
 Everything is located in the `.gitlab-ci.yml` the on the top-level directory of
 the repository. We have 4 images to build (`hasher`, `rng`, `webui`, `worker`)
-and to push to the gitlab built-in docker registry.
+and to push to the GitLab built-in Docker registry.
 
-### Notes:
+### Notes
 
-  - Useful link: https://docs.gitlab.com/ce/ci/docker/using_docker_build.html
-  - values associated with gitlab deployement are located in `resources/values/gitlab.yaml`
-      Use `make gitlab` in the `resources` directory to deploy changes
-  - there is some find some yaml specialities used in `.gitlab-ci.yaml` (`<<` operator):
-    those are supported by the gitlab parser, not by Kubernetes, so don't try to use it in kubernetes manifests.
+- This documentation has a lot of helpful information: https://docs.gitlab.com/ce/ci/docker/using_docker_build.html.
+- Values associated with gitlab deployement are located in `resources/values/gitlab.yaml`.
+- Use `make gitlab` in the `resources` directory to deploy changes.
+- The `.gitlab-ci.yaml` file is using some custom extensions, like the `<<` operator; those are supported by the gitlab parser, not by Kubernetes, so don't try to use it in kubernetes manifests.
 
+## Exercice 2: Use kaniko to build the images
 
-## Exercice 2: Use kaniko to build previous images
+In the previous exercise, we used privileged containers to build
+the Docker image. To improve security, we are going to use Kaniko instead.
+Kaniko can build Docker images without requiring special permissions.
 
-Same as the previous exercice, but don't use priviledge container to build docker image.
-That's a good point for security !
+- Kaniko documentation: https://github.com/GoogleContainerTools/kaniko
+- Kaniko with GitLab integration: https://docs.gitlab.com/ce/ci/docker/using_kaniko.html
 
- - kaniko documentation: https://github.com/GoogleContainerTools/kaniko
- - kaniko with gitlab integration: https://docs.gitlab.com/ce/ci/docker/using_kaniko.html
+## Exercise 3: Deploy a per-commit test sandbox
 
-## Exercice 3: Deploy a per-commit test sandbox
+Use the GitLab CI pipeline to deploy an environment per commit.
+Try scaling the various component of the app! (Remember, we want to get richer and richer! More DockerCoins!)
 
-Use the gitlab CI pipeline to deploy an environment per commit.
-Try scaling the various component of the app ! Remember we want to get richer and richer !
+### Notes
 
-### Notes:
+To use an image from a private registry (that requires authentication),
+we need to create a Secret of type `docker-registry`.
 
-  - To get a yaml representing a docker-registry secret, run the following command,
-    ```
-    kubectl create secret --dry-run -o yaml docker-registry regcreds --docker-server=registry.$INGRESS_IP.nip.io --docker-username=foo --docker-password=bar
-    ```
-  - A kubeconfig to access the cluster is located on the master node in: `/etc/kubernetes/admin.conf`
+To generate the YAML representing a docker-registry secret, we can run the following command:
 
-## Exercice 4: Deploy prometheus to analyse scalign problem
+```shell
+kubectl create secret --dry-run -o yaml docker-registry regcreds \
+        --docker-server=registry.$INGRESS_IP.nip.io \
+        --docker-username=foo --docker-password=bar
+```
 
-Install prometheus and grafana
+We can find a `kubeconfig` file to access the cluster on the master node, in `/etc/kubernetes/admin.conf`.
+
+## Exercice 4: Deploy prometheus to analyze scaling problem
+
+Install prometheus and grafana:
 
 ```shell
 resources $ make prometheus
 resources $ make grafana
 ```
 
-Then you will be able to edit `hasher` and `rng` to create prometheus endpoints.
-Finally try to analyse the scaling problem.
+Then edit `hasher` and `rng` to create prometheus endpoints.
+
+Finally, try to analyze the scaling problem.
 
 ## Exercice 5: Deploy Jaeger and use tracing
 
@@ -119,6 +136,6 @@ resources $ make jaeger
 
 Integrate worker python code with opentelemetry (tracing framework, compatible with jaeger) and enable tracing:
 
-  - opentelemetry python sample: https://opentelemetry.io/docs/python/tracing/
-  - opentelemetry python repository: https://github.com/open-telemetry/opentelemetry-python
-  - opentelemetry python documentation: https://open-telemetry.github.io/opentelemetry-python/
+- opentelemetry python sample: https://opentelemetry.io/docs/python/tracing/
+- opentelemetry python repository: https://github.com/open-telemetry/opentelemetry-python
+- opentelemetry python documentation: https://open-telemetry.github.io/opentelemetry-python/
