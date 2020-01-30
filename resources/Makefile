@@ -44,7 +44,7 @@ CA_DIR = ca
 include custom.mk
 
 .PHONY: gitlab
-gitlab: $(GITLAB_HELM_REPO) namespace-$(GITLAB_NAMESPACE) ca-self-sign ingress cert-manager
+gitlab: $(GITLAB_HELM_REPO) namespace-$(GITLAB_NAMESPACE) ca-self-sign cert-manager
 	# Create self-sign cert in the gitlab namespace, gitlab-runner use the public endpoint
 	kubectl -n $(GITLAB_NAMESPACE) create secret generic gitlab-ca-crt \
 	--from-literal=gitlab.$(INGRESS_IP).nip.io.crt="$$(cat ${CA_DIR}/ca.crt)" \

@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 global:
-  registry: kubecoin
+  registry: dockercoins
 
 
 worker:
@@ -87,6 +87,8 @@ redis:
   image:
     repository: redis
     tag: latest
+  metrics:
+    enabled: true
 
 imagePullSecrets: []
 nameOverride: ""
