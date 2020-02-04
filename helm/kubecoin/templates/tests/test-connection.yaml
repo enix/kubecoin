@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args:  ['{{ include "kubecoin.fullname" . }}:{{ .Values.service.port }}']
+      args:  ['{{ include "kubecoin.fullname" . }}-webui:{{ .Values.service.port }}']
   restartPolicy: Never
