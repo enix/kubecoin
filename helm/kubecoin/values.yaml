@@ -35,6 +35,11 @@ worker:
     #   cpu: 100m
     #   memory: 128Mi
 
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 3
+      maxSurge: 5
   nodeSelector: {}
 
   tolerations: []
