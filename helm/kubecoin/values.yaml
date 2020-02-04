@@ -127,6 +127,7 @@ extraEnvs: {}
 
 redisEndpoint:
 redis:
+  enabled: true
   cluster:
     enabled: false
   usePassword: false
